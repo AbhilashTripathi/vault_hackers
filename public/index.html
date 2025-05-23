@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Document Search - RAG System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Blockchain Document Search <small style="font-size: 0.6em; display: block;">RAG System with Gemini</small></h1>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="chat">Chat</button>
+                <button class="tab-btn" data-tab="documents">Documents</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Chat Tab -->
+            <div class="tab-content active" id="chat-tab">
+                <div class="chat-container">
+                    <div class="messages" id="messages">
+                        <div class="message bot">
+                            <div class="message-content">
+                                <p>Hello! I'm your Blockchain Document Search Assistant powered by RAG and Google Gemini. Ask me any questions about blockchain technology, and I'll search through the document repository to find relevant information for you.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="input-area">
+                        <textarea id="user-input" placeholder="Type your message here..."></textarea>
+                        <button id="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents Tab -->
+            <div class="tab-content" id="documents-tab">
+                <div class="documents-container">
+                    <h2>Document Management</h2>
+                    <div class="document-stats">
+                        <h3>Document Statistics</h3>
+                        <div id="document-stats-content">
+                            <p>Loading document statistics...</p>
+                        </div>
+                    </div>
+
+                    <div class="document-list">
+                        <h3>Available Documents</h3>
+                        <div id="document-list-content">
+                            <p>Loading documents...</p>
+                        </div>
+                        <button id="refresh-docs-btn">Refresh Documents</button>
+                    </div>
+
+                    <div class="add-document">
+                        <h3>Add New Document</h3>
+                        <div class="input-group">
+                            <label>Document Title:</label>
+                            <input type="text" id="document-title" placeholder="Enter document title...">
+                        </div>
+                        <div class="input-group">
+                            <label>File Type:</label>
+                            <select id="document-type">
+                                <option value="text">Text (.txt)</option>
+                                <option value="markdown">Markdown (.mdx)</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Document Content:</label>
+                            <textarea id="document-content" placeholder="Enter document content..."></textarea>
+                        </div>
+                        <button id="add-document-btn">Add Document</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
