@@ -172,6 +172,15 @@ app.post('/api/chat', async (req, res) => {
       If the question cannot be answered using the context, say "I don't have enough information to answer that question."
       Do not make up information that is not in the context.
       
+      It is EXTREMELY IMPORTANT that you do not provide information that is not in the context.
+      If you are unsure whether the information is in the context or if the request, say "I don't have enough information to answer that question."
+
+      DO NOT mention, reference, or cite sources in your response when:
+      1. The question is generic and not specific to the context provided
+      2. The answer cannot be found in the provided context
+      3. You are unsure if the information is accurate based on the context
+      4. The context is not relevant to the question asked
+      
       When showing code examples, always format them with triple backticks and specify the language.
       Format code with proper indentation and line breaks for readability. For example:
       
@@ -208,17 +217,50 @@ app.post('/api/chat', async (req, res) => {
       // Log retrieved docs for debugging
       console.log("Retrieved docs metadata:", retrievedDocs.map(doc => doc.metadata));
       
-      // Return response with source information
-      const sources = retrievedDocs.map(doc => ({
-        reference: doc.metadata.reference || 'No reference available',
-        filename: doc.metadata.filename || 'Unknown file'
-      }));
+      // Check if the response actually contains information from the sources
+      // This is a comprehensive heuristic to determine if the response is based on the context
+      const negativeIndicators = [
+        "I don't have enough information",
+        "I don't know",
+        "not provided in the context",
+        "cannot find information",
+        "no information about",
+        "no specific information",
+        "not mentioned in",
+        "not specified in",
+        "doesn't mention",
+        "does not mention",
+        "doesn't provide",
+        "does not provide",
+        "doesn't contain",
+        "does not contain",
+        "doesn't include",
+        "does not include",
+        "unable to find",
+        "couldn't find",
+        "could not find"
+      ];
       
-      console.log("Sources being sent to client:", sources);
+      // Check if any negative indicators are present in the response
+      const hasNegativeIndicator = negativeIndicators.some(indicator =>
+        text.toLowerCase().includes(indicator.toLowerCase())
+      );
+      
+      // Only include sources if we're confident the answer is based on the documents
+      let sourcesToSend = [];
+      if (!hasNegativeIndicator) {
+        sourcesToSend = retrievedDocs.map(doc => ({
+          reference: doc.metadata.reference || 'No reference available',
+          filename: doc.metadata.filename || 'Unknown file'
+        }));
+        console.log("Sources being sent to client:", sourcesToSend);
+      } else {
+        console.log("No relevant sources found for this query - negative indicators detected");
+      }
       
       res.json({
         response: text,
-        sources: sources,
+        sources: sourcesToSend,
         usage: {
           prompt_tokens: promptWithContext.length,
           completion_tokens: text.length,
