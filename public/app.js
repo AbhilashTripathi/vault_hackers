@@ -80,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 addMessageToChat(data.response, 'bot');
                 
                 // Add source information if available
+                console.log("Sources received from server:", data.sources);
                 if (data.sources && data.sources.length > 0) {
                     const sourcesMessage = document.createElement('div');
                     sourcesMessage.classList.add('message', 'bot', 'sources-message');
@@ -95,10 +96,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     const sourcesList = document.createElement('ul');
                     sourcesList.classList.add('sources-list');
                     
+                    // Create a Set to track unique references
+                    const uniqueReferences = new Set();
+                    
                     data.sources.forEach(source => {
-                        const sourceItem = document.createElement('li');
-                        sourceItem.textContent = source.content;
-                        sourcesList.appendChild(sourceItem);
+                        console.log("Processing source:", source);
+                        // Only add unique references
+                        if (source.reference && !uniqueReferences.has(source.reference)) {
+                            console.log("Adding unique reference:", source.reference);
+                            uniqueReferences.add(source.reference);
+                            
+                            const sourceItem = document.createElement('li');
+                            
+                            // Create a link if it's a URL
+                            if (source.reference.startsWith('http')) {
+                                const link = document.createElement('a');
+                                link.href = source.reference;
+                                link.target = '_blank';
+                                link.rel = 'noopener noreferrer';
+                                link.textContent = source.reference;
+                                sourceItem.appendChild(link);
+                            } else {
+                                sourceItem.textContent = source.reference;
+                            }
+                            
+                            sourcesList.appendChild(sourceItem);
+                        }
                     });
                     
                     sourcesContent.appendChild(sourcesList);
@@ -127,10 +150,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageContent = document.createElement('div');
         messageContent.classList.add('message-content');
         
-        const messageParagraph = document.createElement('p');
-        messageParagraph.textContent = content;
+        // Process content to properly handle code blocks
+        if (content.includes('[CODE_BLOCK:')) {
+            // Split content by code blocks
+            const parts = content.split(/(\[CODE_BLOCK:.*?\]\[\/CODE_BLOCK\])/g);
+            
+            parts.forEach(part => {
+                if (part.startsWith('[CODE_BLOCK:')) {
+                    // Extract language and code
+                    const match = part.match(/\[CODE_BLOCK:(.*?)\]([\s\S]*?)\[\/CODE_BLOCK\]/);
+                    if (match) {
+                        const language = match[1];
+                        const code = match[2];
+                        
+                        // Create code block container
+                        const codeDiv = document.createElement('div');
+                        codeDiv.classList.add('code-block-container');
+                        
+                        // Create pre and code elements
+                        const pre = document.createElement('pre');
+                        const codeElement = document.createElement('code');
+                        codeElement.className = `language-${language}`;
+                        codeElement.textContent = code;
+                        
+                        pre.appendChild(codeElement);
+                        codeDiv.appendChild(pre);
+                        messageContent.appendChild(codeDiv);
+                    }
+                } else if (part.trim()) {
+                    // This is regular text
+                    const textParagraph = document.createElement('p');
+                    textParagraph.textContent = part;
+                    messageContent.appendChild(textParagraph);
+                }
+            });
+        } else {
+            // Regular text content
+            const messageParagraph = document.createElement('p');
+            messageParagraph.textContent = content;
+            messageContent.appendChild(messageParagraph);
+        }
         
-        messageContent.appendChild(messageParagraph);
+        // No need to append messageParagraph again as it's handled in the if/else blocks
         messageDiv.appendChild(messageContent);
         messagesContainer.appendChild(messageDiv);
         
@@ -255,10 +316,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = documentTitleInput.value.trim();
         const content = documentContentInput.value.trim();
         const fileType = document.getElementById('document-type').value;
+        const reference = document.getElementById('document-reference').value.trim();
         
         if (!title || !content) {
             alert('Please provide both title and content for the document');
             return;
+        }
+        
+        // Prepare the document content with reference
+        let documentContent = content;
+        if (reference) {
+            documentContent = `reference: ${reference}\n\n${content}`;
         }
         
         // Disable button and show loading state
@@ -271,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ title, content, fileType })
+                body: JSON.stringify({ title, content: documentContent, fileType })
             });
             
             if (!response.ok) {
@@ -284,6 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('Document added successfully!');
                 documentTitleInput.value = '';
                 documentContentInput.value = '';
+                document.getElementById('document-reference').value = '';
                 
                 // Refresh document list and stats
                 fetchDocuments();

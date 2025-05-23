@@ -377,15 +377,19 @@ main {
 
 .sources-content {
     background-color: #f0f2f5;
-    border: 1px solid #e4e6e9;
+    border: 2px solid var(--secondary-color);
     border-radius: var(--border-radius);
+    padding: 10px;
+    margin-top: 10px;
 }
 
 .sources-title {
-    font-weight: 500;
+    font-weight: 600;
     margin-bottom: 0.5rem;
-    color: var(--light-text);
-    font-size: 0.9rem;
+    color: var(--primary-color);
+    font-size: 1rem;
+    border-bottom: 1px solid var(--secondary-color);
+    padding-bottom: 5px;
 }
 
 .sources-list {
@@ -399,9 +403,90 @@ main {
     margin-bottom: 0.3rem;
 }
 
+.sources-list a {
+    color: var(--secondary-color);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.sources-list a:hover {
+    text-decoration: underline;
+    color: var(--primary-color);
+}
+
 .error {
     color: #e74c3c;
     font-style: italic;
+}
+
+/* Code block styling */
+pre {
+    background-color: #282c34;
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    margin: 0.5rem 0;
+    overflow-x: auto;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border: 1px solid #3e4451;
+}
+
+code {
+    font-family: 'Courier New', Courier, monospace;
+    color: #e6e6e6;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    white-space: pre;
+    display: block;
+}
+
+.language-javascript {
+    color: #61dafb;
+}
+
+.language-javascript .keyword {
+    color: #c678dd;
+}
+
+.language-javascript .string {
+    color: #98c379;
+}
+
+.language-javascript .comment {
+    color: #5c6370;
+    font-style: italic;
+}
+
+.language-shell {
+    color: #98c379;
+}
+
+/* Make code blocks stand out in the chat */
+.message-content pre {
+    margin: 10px 0;
+    max-width: 100%;
+}
+
+.code-block-container {
+    position: relative;
+    margin: 15px 0;
+}
+
+.code-block-container::before {
+    content: 'Code';
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    background: var(--primary-color);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.code-block-container pre {
+    padding-top: 20px;
 }
 
 /* Loading spinner */

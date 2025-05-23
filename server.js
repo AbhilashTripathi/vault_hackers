@@ -45,11 +45,33 @@ async function initializeRAG() {
     
     // Load each file and combine the documents
     let allDocs = [];
+    const documentReferences = {};
+    
     for (const file of files) {
       const filePath = path.join(dataDir, file);
       console.log(`Loading document: ${file}`);
+      
+      // Read the file content to extract reference
+      const fileContent = fs.readFileSync(filePath, 'utf8');
+      const referenceMatch = fileContent.match(/^reference:\s*(https?:\/\/[^\s]+)/);
+      const reference = referenceMatch ? referenceMatch[1] : null;
+      
+      if (reference) {
+        documentReferences[filePath] = reference;
+        console.log(`Found reference for ${file}: ${reference}`);
+      }
+      
       const loader = new TextLoader(filePath);
       const docs = await loader.load();
+      
+      // Add the reference to the document metadata
+      if (reference) {
+        docs.forEach(doc => {
+          doc.metadata.reference = reference;
+          doc.metadata.filename = file;
+        });
+      }
+      
       allDocs = allDocs.concat(docs);
     }
     
@@ -61,6 +83,22 @@ async function initializeRAG() {
       chunkOverlap: 200,
     });
     const splitDocs = await textSplitter.splitDocuments(allDocs);
+    
+    // Ensure metadata is preserved in all chunks
+    splitDocs.forEach(doc => {
+      // Find the original document this chunk came from
+      const originalDoc = allDocs.find(original =>
+        doc.pageContent.includes(original.pageContent.substring(0, 50)) ||
+        original.pageContent.includes(doc.pageContent.substring(0, 50))
+      );
+      
+      if (originalDoc && originalDoc.metadata) {
+        // Copy metadata from original document
+        doc.metadata = { ...originalDoc.metadata };
+      }
+    });
+    
+    console.log("Sample chunk metadata:", splitDocs[0].metadata);
     console.log(`Document split into ${splitDocs.length} chunks`);
     
     // Create in-memory vector store
@@ -83,7 +121,25 @@ initializeRAG().then(success => {
   }
 });
 
-// Routes
+// Helper function to format code blocks in responses
+function formatCodeBlocks(text) {
+  // We'll use a special marker that won't be interpreted as HTML
+  return text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, language, code) => {
+    // Clean up the code and language
+    code = code.trim();
+    language = language.trim() || 'javascript';
+    
+    // Format the code with proper indentation and line breaks
+    const formattedCode = code
+      .split('\n')
+      .map(line => line.trim())
+      .join('\n');
+    
+    // Return a special format that will be handled by the frontend
+    return `[CODE_BLOCK:${language}]${formattedCode}[/CODE_BLOCK]`;
+  });
+}
+
 // Routes
 app.post('/api/chat', async (req, res) => {
   try {
@@ -116,6 +172,23 @@ app.post('/api/chat', async (req, res) => {
       If the question cannot be answered using the context, say "I don't have enough information to answer that question."
       Do not make up information that is not in the context.
       
+      When showing code examples, always format them with triple backticks and specify the language.
+      Format code with proper indentation and line breaks for readability. For example:
+      
+      \`\`\`javascript
+      bitgo
+        .coin('tbld')
+        .wallets()
+        .generateWallet({
+          label: 'My Test Wallet',
+          passphrase: 'secretpassphrase1a5df8380e0e30',
+        })
+        .then(function (wallet) {
+          // print the new wallet
+          console.dir(wallet);
+        });
+      \`\`\`
+      
       Context:
       ${context}`;
       
@@ -127,15 +200,25 @@ app.post('/api/chat', async (req, res) => {
       
       const result = await geminiModel.generateContent(promptWithContext);
       const response = await result.response;
-      const text = response.text();
+      let text = response.text();
+      
+      // Format code blocks in the response
+      text = formatCodeBlocks(text);
 
+      // Log retrieved docs for debugging
+      console.log("Retrieved docs metadata:", retrievedDocs.map(doc => doc.metadata));
+      
       // Return response with source information
+      const sources = retrievedDocs.map(doc => ({
+        reference: doc.metadata.reference || 'No reference available',
+        filename: doc.metadata.filename || 'Unknown file'
+      }));
+      
+      console.log("Sources being sent to client:", sources);
+      
       res.json({
         response: text,
-        sources: retrievedDocs.map(doc => ({
-          content: doc.pageContent.substring(0, 150) + '...',
-          metadata: doc.metadata
-        })),
+        sources: sources,
         usage: {
           prompt_tokens: promptWithContext.length,
           completion_tokens: text.length,
